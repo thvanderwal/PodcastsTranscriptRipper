@@ -158,8 +158,9 @@ async function fetchTranscript() {
         }
         
         // Check iTunes episode ID tag
-        const itunesEpisode = item.querySelector('itunes\\:episode, episode');
-        if (itunesEpisode?.textContent === episodeId) {
+        const itunesEpisode = item.querySelector('itunes\\:episode') || item.querySelector('episode');
+        const itunesEpisodeText = itunesEpisode?.textContent || '';
+        if (itunesEpisodeText.includes(episodeId)) {
           targetItem = item;
           break;
         }
