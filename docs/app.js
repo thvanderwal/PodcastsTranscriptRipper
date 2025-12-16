@@ -139,11 +139,34 @@ async function fetchTranscript() {
     let targetItem = null;
     
     if (episodeId) {
-      // Find specific episode
+      // Find specific episode by checking multiple fields
       const items = feedDoc.querySelectorAll('item');
       for (let item of items) {
+        // Check GUID
         const guid = item.querySelector('guid')?.textContent || '';
         if (guid.includes(episodeId)) {
+          targetItem = item;
+          break;
+        }
+        
+        // Check enclosure URL (often contains episode ID)
+        const enclosure = item.querySelector('enclosure');
+        const enclosureUrl = enclosure?.getAttribute('url') || '';
+        if (enclosureUrl.includes(episodeId)) {
+          targetItem = item;
+          break;
+        }
+        
+        // Check iTunes episode ID tag
+        const itunesEpisode = item.querySelector('itunes\\:episode, episode');
+        if (itunesEpisode?.textContent === episodeId) {
+          targetItem = item;
+          break;
+        }
+        
+        // Check link field
+        const link = item.querySelector('link')?.textContent || '';
+        if (link.includes(episodeId)) {
           targetItem = item;
           break;
         }
@@ -156,7 +179,11 @@ async function fetchTranscript() {
           const items = feedDoc.querySelectorAll('item');
           targetItem = items[parseInt(episodeNum[1]) - 1] || items[0];
         } else {
-          targetItem = feedDoc.querySelector('item'); // Get latest episode
+          // Last resort: get the latest episode and warn the user
+          targetItem = feedDoc.querySelector('item');
+          if (targetItem) {
+            console.warn(`Could not find episode ${episodeId} in feed, using latest episode as fallback`);
+          }
         }
       }
     } else {
