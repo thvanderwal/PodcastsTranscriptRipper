@@ -7,6 +7,7 @@ document.getElementById('copy-btn').addEventListener('click', copyToClipboard);
 const CORS_PROXIES = [
   'https://api.allorigins.win/raw?url=',
   'https://corsproxy.io/?',
+  'https://api.codetabs.com/v1/proxy?quest=',
 ];
 
 let currentProxyIndex = 0;
@@ -30,7 +31,7 @@ async function fetchWithCORS(url) {
       continue; // Try next proxy
     }
   }
-  throw new Error('All CORS proxies failed');
+  throw new Error('All CORS proxies failed. Please check your internet connection and try again later.');
 }
 
 function extractPodcastId(url) {
