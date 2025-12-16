@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apple Podcast Transcript Exporter</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <h1>Apple Podcast Transcript Exporter</h1>
+      </div>
+
+      <p class="description">
+        Extract transcripts from Apple Podcasts. Works entirely in your browser - no backend required!
+      </p>
+
+      <div class="input-group">
+        <label for="podcast-url">Podcast Episode URL</label>
+        <input 
+          type="text" 
+          id="podcast-url" 
+          placeholder="https://podcasts.apple.com/us/podcast/.../id...?i=1000..."
+        >
+        <p class="hint">Paste the full Apple Podcasts URL from your browser</p>
+      </div>
+
+      <button id="fetch-btn" class="btn-primary">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Extract Transcript
+      </button>
+
+      <div id="error" class="alert alert-error" style="display: none;"></div>
+      <div id="warning" class="alert alert-warning" style="display: none;"></div>
+      <div id="loading" class="loading" style="display: none;">
+        <div class="spinner"></div>
+        <span>Fetching transcript...</span>
+      </div>
+
+      <div id="results" style="display: none;">
+        <div class="metadata-card">
+          <h2>Metadata</h2>
+          <div class="metadata-grid" id="metadata"></div>
+        </div>
+
+        <div class="transcript-section">
+          <div class="section-header">
+            <h2>Full Transcript</h2>
+            <button id="copy-btn" class="btn-secondary">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copy
+            </button>
+          </div>
+          <div class="transcript-box" id="transcript-text"></div>
+        </div>
+
+        <div class="export-section">
+          <h2>Export Options</h2>
+          <div class="export-buttons">
+            <button class="btn-export btn-blue" onclick="downloadTranscript('txt')">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Download TXT
+            </button>
+            <button class="btn-export btn-green" onclick="downloadTranscript('srt')">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Download SRT
+            </button>
+            <button class="btn-export btn-purple" onclick="downloadTranscript('json')">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Download JSON
+            </button>
+          </div>
+        </div>
+
+        <div class="alert alert-info">
+          <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <div>
+            <strong>Note:</strong> Transcripts are extracted from Apple's RSS feeds. 
+            Not all podcasts have transcripts available. If a transcript isn't found, 
+            the podcast creator may not have provided one.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>🎙️ Built with ❤️ for podcast lovers</p>
+      <p>Works entirely in your browser • No data is sent to any server</p>
+      <p><a href="https://github.com/thvanderwal/PodcastsTranscriptRipper" target="_blank">View on GitHub</a></p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
