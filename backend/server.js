@@ -17,8 +17,8 @@ const BEARER_TOKEN = process.env.APPLE_BEARER_TOKEN;
 const ACTION_SIGNATURE = process.env.APPLE_ACTION_SIGNATURE;
 const REQUEST_TIMESTAMP = process.env.APPLE_REQUEST_TIMESTAMP;
 
-// Get bearer token from Apple
-async function getBearerToken() {
+// Get or fetch bearer token from Apple
+async function getOrFetchBearerToken() {
   if (BEARER_TOKEN) return BEARER_TOKEN;
   
   try {
@@ -95,7 +95,7 @@ app.post('/api/transcript', async (req, res) => {
     const episodeId = match[1];
     
     // Get bearer token
-    const token = await getBearerToken();
+    const token = await getOrFetchBearerToken();
     
     // Fetch transcript metadata
     const metadataUrl = `https://amp-api.podcasts.apple.com/v1/catalog/us/podcast-episodes/${episodeId}/transcripts?fields=ttmlToken,ttmlAssetUrls&include%5Bpodcast-episodes%5D=podcast&l=en-US&with=entitlements`;
@@ -136,7 +136,7 @@ app.post('/api/transcript', async (req, res) => {
       title: episodeData?.attributes?.name || 'Unknown',
       podcast: episodeData?.relationships?.podcast?.data?.id || 'Unknown',
       duration: episodeData?.attributes?.durationInMilliseconds 
-        ? new Date(episodeData.attributes.durationInMilliseconds).toISOString().substr(11, 8)
+        ? new Date(episodeData.attributes.durationInMilliseconds).toISOString().substring(11, 19)
         : 'Unknown',
       releaseDate: episodeData?.attributes?.releaseDateTime || null,
       description: episodeData?.attributes?.description?.standard || '',
