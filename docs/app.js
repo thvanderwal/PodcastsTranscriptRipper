@@ -60,6 +60,9 @@ function extractEpisodeId(url) {
  * - Removing trailing slashes
  * - Removing query parameters
  * - Removing URL fragments
+ * - Normalizing URL encoding (decode and re-encode consistently)
+ * - Normalizing multiple consecutive slashes to single slashes
+ * - Removing www prefix for consistent hostname comparison
  * 
  * @param {string} url - The URL to normalize
  * @returns {string} The normalized URL, or empty string if input is falsy
@@ -74,8 +77,27 @@ function normalizeUrl(url) {
     // Convert to lowercase for case-insensitive comparison
     // Use https protocol consistently
     const protocol = 'https:';
-    const hostname = parsed.hostname.toLowerCase();
-    const pathname = parsed.pathname.toLowerCase().replace(/\/+$/, ''); // Lowercase and remove trailing slashes
+    
+    // Normalize hostname: lowercase and remove www prefix
+    let hostname = parsed.hostname.toLowerCase();
+    if (hostname.startsWith('www.')) {
+      hostname = hostname.substring(4);
+    }
+    
+    // Normalize pathname:
+    // 1. Decode to handle URL encoding differences
+    // 2. Normalize multiple consecutive slashes to single slashes
+    // 3. Convert to lowercase
+    // 4. Remove trailing slashes
+    let pathname = decodeURIComponent(parsed.pathname);
+    pathname = pathname.replace(/\/+/g, '/'); // Replace multiple slashes with single slash
+    pathname = pathname.toLowerCase();
+    pathname = pathname.replace(/\/+$/, ''); // Remove trailing slashes
+    
+    // Re-encode the pathname to ensure consistent encoding
+    // This handles cases where some URLs are encoded and others are not
+    pathname = encodeURI(pathname).replace(/%25/g, '%'); // Avoid double-encoding
+    
     const port = parsed.port ? `:${parsed.port}` : '';
     
     // Build normalized URL without query params or fragments, preserving port if present
@@ -86,9 +108,11 @@ function normalizeUrl(url) {
     return url
       .toLowerCase()
       .replace(/^http:/, 'https:')
+      .replace(/^https:\/\/www\./, 'https://') // Remove www
       .split('?')[0]
       .split('#')[0]
-      .replace(/\/+$/, '');
+      .replace(/\/+/g, '/') // Normalize multiple slashes
+      .replace(/\/+$/, ''); // Remove trailing slashes
   }
 }
 
