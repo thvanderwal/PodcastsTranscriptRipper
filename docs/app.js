@@ -53,6 +53,32 @@ function extractEpisodeId(url) {
   return match ? match[1] : null;
 }
 
+function normalizeUrl(url) {
+  if (!url) return '';
+  
+  try {
+    // Parse the URL
+    const parsed = new URL(url);
+    
+    // Convert to lowercase for case-insensitive comparison
+    // Use https protocol consistently
+    const protocol = 'https:';
+    const hostname = parsed.hostname.toLowerCase();
+    const pathname = parsed.pathname.replace(/\/$/, ''); // Remove trailing slash
+    
+    // Build normalized URL without query params or fragments
+    return `${protocol}//${hostname}${pathname}`;
+  } catch (e) {
+    // If URL parsing fails, do basic normalization
+    return url
+      .toLowerCase()
+      .replace(/^http:/, 'https:')
+      .replace(/\/$/, '')
+      .split('?')[0]
+      .split('#')[0];
+  }
+}
+
 function parseTTML(ttmlText) {
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(ttmlText, 'text/xml');
@@ -124,13 +150,15 @@ async function fetchTranscript() {
 
     let podcastInfo = null;
     let feedUrl = null;
+    let episodeAudioUrl = null;
     
     // If we have an episode ID, try looking it up directly first
     // This can give us more accurate episode matching
     if (episodeId) {
       try {
         if (DEBUG) console.log('Attempting episode direct lookup...');
-        const episodeLookupUrl = `https://itunes.apple.com/lookup?id=${episodeId}`;
+        // Use &entity=podcastEpisode to get episode info including audio URL in one call
+        const episodeLookupUrl = `https://itunes.apple.com/lookup?id=${episodeId}&entity=podcastEpisode`;
         const episodeLookupResponse = await fetchWithCORS(episodeLookupUrl);
         const episodeLookupData = await episodeLookupResponse.json();
         
@@ -140,6 +168,15 @@ async function fetchTranscript() {
           // The first result should be the episode, but we need the podcast info for the feed
           // Sometimes the results include both episode and podcast
           const results = episodeLookupData.results;
+          
+          // Extract episode audio URL from the episode info
+          const episodeInfo = results.find(r => r.trackId?.toString() === episodeId.toString());
+          if (episodeInfo) {
+            // Get the audio URL - this is the key to matching with RSS feed
+            // episodeUrl is the full episode, previewUrl is a 90-second preview (fallback)
+            episodeAudioUrl = episodeInfo.episodeUrl || episodeInfo.previewUrl;
+            if (DEBUG) console.log('✓ Found episode audio URL from API:', episodeAudioUrl ? episodeAudioUrl.substring(0, 80) + '...' : 'none');
+          }
           
           // Look for podcast info in results (kind === 'podcast')
           podcastInfo = results.find(r => r.kind === 'podcast' || (r.wrapperType === 'track' && r.collectionId));
@@ -203,29 +240,9 @@ async function fetchTranscript() {
     if (DEBUG) console.log(`RSS feed contains ${allItems.length} episodes`);
     
     let targetItem = null;
-    let episodeAudioUrl = null;
     
     if (episodeId) {
-      // First, try to get the episode's audio URL from Apple's API
-      try {
-        if (DEBUG) console.log(`Looking up episode ${episodeId} to get audio URL...`);
-        const episodeLookupUrl = `https://itunes.apple.com/lookup?id=${episodeId}&entity=podcastEpisode`;
-        const episodeLookupResponse = await fetchWithCORS(episodeLookupUrl);
-        const episodeLookupData = await episodeLookupResponse.json();
-        
-        if (episodeLookupData.results && episodeLookupData.results.length > 0) {
-          const episodeInfo = episodeLookupData.results.find(r => r.trackId?.toString() === episodeId.toString());
-          if (episodeInfo) {
-            // Get the audio URL - this is the key to matching with RSS feed
-            // episodeUrl is the full episode, previewUrl is a 90-second preview (fallback)
-            episodeAudioUrl = episodeInfo.episodeUrl || episodeInfo.previewUrl;
-            if (DEBUG) console.log('✓ Found episode audio URL from API:', episodeAudioUrl ? episodeAudioUrl.substring(0, 80) + '...' : 'none');
-          }
-        }
-      } catch (error) {
-        if (DEBUG) console.warn('Failed to lookup episode audio URL from API:', error.message);
-        // Continue with fallback methods
-      }
+      // episodeAudioUrl was already obtained from the initial API call above (if available)
       
       if (DEBUG) console.log(`Searching for episode in RSS feed...`);
       
@@ -236,12 +253,12 @@ async function fetchTranscript() {
           const enclosure = item.querySelector('enclosure');
           const enclosureUrl = enclosure?.getAttribute('url') || '';
           
-          // Match the audio URL - compare base URLs without query params for reliability
+          // Match the audio URL - use normalized URLs for reliable comparison
           if (enclosureUrl.length > 0) {
-            const cleanEnclosureUrl = enclosureUrl.split('?')[0];
-            const cleanEpisodeUrl = episodeAudioUrl.split('?')[0];
+            const normalizedEnclosureUrl = normalizeUrl(enclosureUrl);
+            const normalizedEpisodeUrl = normalizeUrl(episodeAudioUrl);
             
-            if (cleanEnclosureUrl === cleanEpisodeUrl) {
+            if (normalizedEnclosureUrl === normalizedEpisodeUrl) {
               targetItem = item;
               if (DEBUG) console.log('✓ Found episode by audio URL match');
               break;
