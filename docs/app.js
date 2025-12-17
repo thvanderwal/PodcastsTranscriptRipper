@@ -288,6 +288,7 @@ async function fetchTranscript() {
       // Try to match by audio URL first (most reliable method)
       if (episodeAudioUrl) {
         if (DEBUG) console.log('Attempting to match by audio URL...');
+        const normalizedEpisodeUrl = normalizeUrl(episodeAudioUrl);
         for (let item of allItems) {
           const enclosure = item.querySelector('enclosure');
           const enclosureUrl = enclosure?.getAttribute('url') || '';
@@ -295,7 +296,6 @@ async function fetchTranscript() {
           // Match the audio URL - use normalized URLs for reliable comparison
           if (enclosureUrl.length > 0) {
             const normalizedEnclosureUrl = normalizeUrl(enclosureUrl);
-            const normalizedEpisodeUrl = normalizeUrl(episodeAudioUrl);
             
             if (normalizedEnclosureUrl === normalizedEpisodeUrl) {
               targetItem = item;
