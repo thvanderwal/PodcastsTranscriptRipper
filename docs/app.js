@@ -170,8 +170,9 @@ async function fetchTranscript() {
     if (episodeId) {
       try {
         if (DEBUG) console.log('Attempting episode direct lookup...');
-        // Use &entity=podcastEpisode to get episode info including audio URL in one call
-        const episodeLookupUrl = `https://itunes.apple.com/lookup?id=${episodeId}&entity=podcastEpisode`;
+        // Use &entity=podcastEpisode to get both episode and podcast collection in one API call
+        // This consolidates what would otherwise be two separate calls
+        const episodeLookupUrl = `https://itunes.apple.com/lookup?id=${episodeId}&entity=podcastEpisode,podcast`;
         const episodeLookupResponse = await fetchWithCORS(episodeLookupUrl);
         const episodeLookupData = await episodeLookupResponse.json();
         
