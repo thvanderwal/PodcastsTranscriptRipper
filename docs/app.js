@@ -67,10 +67,12 @@ function extractEpisodeId(url) {
 function normalizeUrl(url) {
   if (!url) return '';
   
+  // Regex to check if URL has a valid protocol (scheme://)
+  const hasProtocolRegex = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//;
+  
   // Ensure URL has a protocol before parsing
   let urlToParse = url;
-  // Check for protocol - must be followed by :// to be valid
-  if (!url.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//)) {
+  if (!hasProtocolRegex.test(url)) {
     // URL doesn't have a protocol, prepend https://
     urlToParse = 'https://' + url;
   }
@@ -96,7 +98,7 @@ function normalizeUrl(url) {
     // Replace http:// with https://, or prepend https:// if no protocol
     if (normalized.startsWith('http://')) {
       normalized = normalized.replace(/^http:\/\//, 'https://');
-    } else if (!normalized.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//)) {
+    } else if (!hasProtocolRegex.test(normalized)) {
       normalized = 'https://' + normalized;
     }
     
