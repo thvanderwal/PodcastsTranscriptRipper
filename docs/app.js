@@ -189,6 +189,14 @@ async function fetchTranscript() {
             // episodeUrl is the full episode, previewUrl is a 90-second preview (fallback)
             episodeAudioUrl = episodeInfo.episodeUrl || episodeInfo.previewUrl;
             if (DEBUG) console.log('✓ Found episode audio URL from API:', episodeAudioUrl ? episodeAudioUrl.substring(0, 80) + '...' : 'none');
+            if (!episodeAudioUrl && DEBUG) {
+              console.warn(
+                'Episode info found but no audio URL could be extracted (episodeUrl/previewUrl missing). Episode ID:',
+                episodeId,
+                'Track name:',
+                episodeInfo.trackName
+              );
+            }
           }
           
           // Look for podcast info in results (kind === 'podcast')
