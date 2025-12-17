@@ -76,9 +76,10 @@ function normalizeUrl(url) {
     const protocol = 'https:';
     const hostname = parsed.hostname.toLowerCase();
     const pathname = parsed.pathname.toLowerCase().replace(/\/+$/, ''); // Lowercase and remove trailing slashes
+    const port = parsed.port ? `:${parsed.port}` : '';
     
-    // Build normalized URL without query params or fragments
-    return `${protocol}//${hostname}${pathname}`;
+    // Build normalized URL without query params or fragments, preserving port if present
+    return `${protocol}//${hostname}${port}${pathname}`;
   } catch (e) {
     // If URL parsing fails, do basic normalization
     // Note: This is a fallback and may not handle all edge cases perfectly
