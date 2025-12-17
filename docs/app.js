@@ -64,7 +64,7 @@ function normalizeUrl(url) {
     // Use https protocol consistently
     const protocol = 'https:';
     const hostname = parsed.hostname.toLowerCase();
-    const pathname = parsed.pathname.replace(/\/$/, ''); // Remove trailing slash
+    const pathname = parsed.pathname.toLowerCase().replace(/\/$/, ''); // Lowercase and remove trailing slash
     
     // Build normalized URL without query params or fragments
     return `${protocol}//${hostname}${pathname}`;
