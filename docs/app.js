@@ -203,8 +203,7 @@ async function fetchTranscript() {
     if (episodeId) {
       console.log(`Searching for episode ID ${episodeId} in RSS feed...`);
       // Find specific episode by checking multiple fields
-      const items = feedDoc.querySelectorAll('item');
-      for (let item of items) {
+      for (let item of allItems) {
         // Check GUID
         const guid = item.querySelector('guid')?.textContent || '';
         if (guid.includes(episodeId)) {
@@ -241,7 +240,7 @@ async function fetchTranscript() {
       }
       
       if (!targetItem) {
-        console.error(`Episode ${episodeId} not found in any of the ${items.length} episodes in the RSS feed`);
+        console.error(`Episode ${episodeId} not found in any of the ${allItems.length} episodes in the RSS feed`);
         // Episode ID not found in feed
         throw new Error(`Episode ${episodeId} not found in the podcast's RSS feed. This could happen if:\n\n` +
           `1. The episode was recently published and hasn't appeared in the RSS feed yet\n` +
