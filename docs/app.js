@@ -75,12 +75,13 @@ function normalizeUrl(url) {
     // Use https protocol consistently
     const protocol = 'https:';
     const hostname = parsed.hostname.toLowerCase();
-    const pathname = parsed.pathname.toLowerCase().replace(/\/+$/, ''); // Lowercase and remove all trailing slashes
+    const pathname = parsed.pathname.toLowerCase().replace(/\/+$/, ''); // Lowercase and remove multiple trailing slashes
     
     // Build normalized URL without query params or fragments
     return `${protocol}//${hostname}${pathname}`;
   } catch (e) {
     // If URL parsing fails, do basic normalization
+    // Note: This is a fallback and may not handle all edge cases perfectly
     return url
       .toLowerCase()
       .replace(/^http:/, 'https:')
