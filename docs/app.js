@@ -53,6 +53,17 @@ function extractEpisodeId(url) {
   return match ? match[1] : null;
 }
 
+/**
+ * Normalizes a URL for consistent comparison by:
+ * - Converting protocol to https
+ * - Converting hostname and pathname to lowercase
+ * - Removing trailing slashes
+ * - Removing query parameters
+ * - Removing URL fragments
+ * 
+ * @param {string} url - The URL to normalize
+ * @returns {string} The normalized URL, or empty string if input is falsy
+ */
 function normalizeUrl(url) {
   if (!url) return '';
   
@@ -64,7 +75,7 @@ function normalizeUrl(url) {
     // Use https protocol consistently
     const protocol = 'https:';
     const hostname = parsed.hostname.toLowerCase();
-    const pathname = parsed.pathname.toLowerCase().replace(/\/$/, ''); // Lowercase and remove trailing slash
+    const pathname = parsed.pathname.toLowerCase().replace(/\/+$/, ''); // Lowercase and remove all trailing slashes
     
     // Build normalized URL without query params or fragments
     return `${protocol}//${hostname}${pathname}`;
@@ -73,7 +84,7 @@ function normalizeUrl(url) {
     return url
       .toLowerCase()
       .replace(/^http:/, 'https:')
-      .replace(/\/$/, '')
+      .replace(/\/+$/, '')
       .split('?')[0]
       .split('#')[0];
   }
