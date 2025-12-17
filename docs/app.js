@@ -214,9 +214,10 @@ async function fetchTranscript() {
         const episodeLookupData = await episodeLookupResponse.json();
         
         if (episodeLookupData.results && episodeLookupData.results.length > 0) {
-          const episodeInfo = episodeLookupData.results.find(r => r.trackId?.toString() === episodeId);
+          const episodeInfo = episodeLookupData.results.find(r => r.trackId?.toString() === episodeId.toString());
           if (episodeInfo) {
             // Get the audio URL - this is the key to matching with RSS feed
+            // episodeUrl is the full episode, previewUrl is a 90-second preview (fallback)
             episodeAudioUrl = episodeInfo.episodeUrl || episodeInfo.previewUrl;
             if (DEBUG) console.log('✓ Found episode audio URL from API:', episodeAudioUrl ? episodeAudioUrl.substring(0, 80) + '...' : 'none');
           }
@@ -235,12 +236,12 @@ async function fetchTranscript() {
           const enclosure = item.querySelector('enclosure');
           const enclosureUrl = enclosure?.getAttribute('url') || '';
           
-          // Match the audio URL - compare base URLs without query params
+          // Match the audio URL - compare base URLs without query params for reliability
           if (enclosureUrl && episodeAudioUrl) {
             const cleanEnclosureUrl = enclosureUrl.split('?')[0];
             const cleanEpisodeUrl = episodeAudioUrl.split('?')[0];
             
-            if (cleanEnclosureUrl === cleanEpisodeUrl || enclosureUrl === episodeAudioUrl) {
+            if (cleanEnclosureUrl === cleanEpisodeUrl) {
               targetItem = item;
               if (DEBUG) console.log('✓ Found episode by audio URL match');
               break;
