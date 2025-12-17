@@ -85,9 +85,9 @@ function normalizeUrl(url) {
     return url
       .toLowerCase()
       .replace(/^http:/, 'https:')
-      .replace(/\/+$/, '')
       .split('?')[0]
-      .split('#')[0];
+      .split('#')[0]
+      .replace(/\/+$/, '');
   }
 }
 
