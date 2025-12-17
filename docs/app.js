@@ -67,9 +67,17 @@ function extractEpisodeId(url) {
 function normalizeUrl(url) {
   if (!url) return '';
   
+  // Ensure URL has a protocol before parsing
+  let urlToParse = url;
+  // Check for protocol - must be followed by :// to be valid
+  if (!url.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//)) {
+    // URL doesn't have a protocol, prepend https://
+    urlToParse = 'https://' + url;
+  }
+  
   try {
     // Parse the URL
-    const parsed = new URL(url);
+    const parsed = new URL(urlToParse);
     
     // Convert to lowercase for case-insensitive comparison
     // Use https protocol consistently
@@ -83,9 +91,17 @@ function normalizeUrl(url) {
   } catch (e) {
     // If URL parsing fails, do basic normalization
     // Note: This is a fallback and may not handle all edge cases perfectly
-    return url
-      .toLowerCase()
-      .replace(/^http:/, 'https:')
+    let normalized = url.toLowerCase();
+    
+    // Replace http:// with https://, or prepend https:// if no protocol
+    if (normalized.startsWith('http://')) {
+      normalized = normalized.replace(/^http:\/\//, 'https://');
+    } else if (!normalized.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//)) {
+      normalized = 'https://' + normalized;
+    }
+    
+    // Remove query params, fragments, and trailing slashes
+    return normalized
       .split('?')[0]
       .split('#')[0]
       .replace(/\/+$/, '');
