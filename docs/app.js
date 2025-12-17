@@ -188,12 +188,22 @@ async function fetchTranscript() {
     if (episodeId) {
       try {
         if (DEBUG) console.log('Attempting episode direct lookup...');
-        // Use &entity=podcastEpisode to get episode info including audio URL in one call
+        // Look up episode with podcastEpisode entity to get episode details including audio URL
+        // The API response may also include the parent podcast collection, allowing us to
+        // extract both the episode audio URL and podcast feed URL from a single call
         const episodeLookupUrl = `https://itunes.apple.com/lookup?id=${episodeId}&entity=podcastEpisode`;
         const episodeLookupResponse = await fetchWithCORS(episodeLookupUrl);
         const episodeLookupData = await episodeLookupResponse.json();
         
-        if (DEBUG) console.log('Episode lookup response:', episodeLookupData.resultCount, 'results');
+        if (DEBUG) {
+          console.log('Episode lookup response:', episodeLookupData.resultCount, 'results');
+          console.log('Result types:', episodeLookupData.results?.map(r => ({
+            wrapperType: r.wrapperType,
+            kind: r.kind,
+            collectionType: r.collectionType,
+            hasFeedUrl: !!r.feedUrl
+          })));
+        }
         
         if (episodeLookupData.results && episodeLookupData.results.length > 0) {
           // The first result should be the episode, but we need the podcast info for the feed
@@ -217,8 +227,13 @@ async function fetchTranscript() {
             }
           }
           
-          // Look for podcast info in results (kind === 'podcast')
-          podcastInfo = results.find(r => r.kind === 'podcast' || (r.wrapperType === 'track' && r.collectionId));
+          // Look for podcast collection in results
+          // iTunes API may return both the episode track and the parent podcast collection
+          // The podcast collection has wrapperType='collection', collectionType='Podcast', and feedUrl
+          podcastInfo = results.find(r => 
+            (r.wrapperType === 'collection' && r.collectionType === 'Podcast') || 
+            r.kind === 'podcast'
+          );
           
           // If we found podcast info from episode lookup, use it
           if (podcastInfo && podcastInfo.feedUrl) {
