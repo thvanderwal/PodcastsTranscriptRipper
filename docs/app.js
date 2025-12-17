@@ -85,19 +85,21 @@ function normalizeUrl(url) {
     }
     
     // Normalize pathname:
-    // 1. Decode to handle URL encoding differences (with error handling)
-    // 2. Normalize multiple consecutive slashes to single slashes
-    // 3. Convert to lowercase
+    // 1. Convert to lowercase
+    // 2. Decode to handle URL encoding differences (with error handling)
+    // 3. Normalize multiple consecutive slashes to single slashes
     // 4. Remove trailing slashes
-    let pathname = parsed.pathname;
+    let pathname = parsed.pathname.toLowerCase();
     try {
       pathname = decodeURIComponent(pathname);
-    } catch (e) {
-      // If decoding fails (malformed encoding), use the original pathname
+    } catch (err) {
+      // If decoding fails due to malformed encoding (URIError), use the original pathname
       // This prevents the function from breaking on edge cases
+      if (!(err instanceof URIError)) {
+        throw err; // Re-throw if it's not a URIError
+      }
     }
     pathname = pathname.replace(/\/+/g, '/'); // Replace multiple slashes with single slash
-    pathname = pathname.toLowerCase();
     pathname = pathname.replace(/\/+$/, ''); // Remove trailing slashes
     
     // Re-encode the pathname to ensure consistent encoding
