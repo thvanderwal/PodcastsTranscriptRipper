@@ -85,18 +85,24 @@ function normalizeUrl(url) {
     }
     
     // Normalize pathname:
-    // 1. Decode to handle URL encoding differences
+    // 1. Decode to handle URL encoding differences (with error handling)
     // 2. Normalize multiple consecutive slashes to single slashes
     // 3. Convert to lowercase
     // 4. Remove trailing slashes
-    let pathname = decodeURIComponent(parsed.pathname);
+    let pathname = parsed.pathname;
+    try {
+      pathname = decodeURIComponent(pathname);
+    } catch (e) {
+      // If decoding fails (malformed encoding), use the original pathname
+      // This prevents the function from breaking on edge cases
+    }
     pathname = pathname.replace(/\/+/g, '/'); // Replace multiple slashes with single slash
     pathname = pathname.toLowerCase();
     pathname = pathname.replace(/\/+$/, ''); // Remove trailing slashes
     
     // Re-encode the pathname to ensure consistent encoding
     // This handles cases where some URLs are encoded and others are not
-    pathname = encodeURI(pathname).replace(/%25/g, '%'); // Avoid double-encoding
+    pathname = encodeURI(pathname);
     
     const port = parsed.port ? `:${parsed.port}` : '';
     
@@ -108,7 +114,7 @@ function normalizeUrl(url) {
     return url
       .toLowerCase()
       .replace(/^http:/, 'https:')
-      .replace(/^https:\/\/www\./, 'https://') // Remove www
+      .replace(/^https:\/\/www\./, 'https://') // Remove www subdomain
       .split('?')[0]
       .split('#')[0]
       .replace(/\/+/g, '/') // Normalize multiple slashes
