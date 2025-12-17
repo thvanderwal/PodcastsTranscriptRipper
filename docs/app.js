@@ -170,9 +170,10 @@ async function fetchTranscript() {
     if (episodeId) {
       try {
         if (DEBUG) console.log('Attempting episode direct lookup...');
-        // Use &entity=podcastEpisode to get both episode and podcast collection in one API call
-        // This consolidates what would otherwise be two separate calls
-        const episodeLookupUrl = `https://itunes.apple.com/lookup?id=${episodeId}&entity=podcastEpisode,podcast`;
+        // Look up episode with podcastEpisode entity to get episode details including audio URL
+        // The API response may also include the parent podcast collection, allowing us to
+        // extract both the episode audio URL and podcast feed URL from a single call
+        const episodeLookupUrl = `https://itunes.apple.com/lookup?id=${episodeId}&entity=podcastEpisode`;
         const episodeLookupResponse = await fetchWithCORS(episodeLookupUrl);
         const episodeLookupData = await episodeLookupResponse.json();
         
@@ -209,7 +210,7 @@ async function fetchTranscript() {
           }
           
           // Look for podcast collection in results
-          // When using &entity=podcastEpisode, iTunes API returns both the episode and the podcast collection
+          // iTunes API may return both the episode track and the parent podcast collection
           // The podcast collection has wrapperType='collection', collectionType='Podcast', and feedUrl
           podcastInfo = results.find(r => 
             (r.wrapperType === 'collection' && r.collectionType === 'Podcast') || 
