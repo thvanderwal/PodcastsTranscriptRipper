@@ -1,5 +1,9 @@
 let currentTranscript = null;
 
+// Enable debug logging to help diagnose API and episode lookup issues
+// Set to true if you're experiencing issues and want to see detailed console logs
+const DEBUG = false;
+
 document.getElementById('fetch-btn').addEventListener('click', fetchTranscript);
 document.getElementById('copy-btn').addEventListener('click', copyToClipboard);
 
@@ -18,15 +22,20 @@ async function fetchWithCORS(url) {
     const proxy = CORS_PROXIES[proxyIndex];
     
     try {
+      if (DEBUG) console.log(`Fetching via proxy ${proxyIndex + 1}/${CORS_PROXIES.length}: ${url.substring(0, 80)}...`);
       const response = await fetch(proxy + encodeURIComponent(url), {
         signal: AbortSignal.timeout(15000)
       });
       
       if (response.ok) {
         currentProxyIndex = proxyIndex; // Use this proxy next time
+        if (DEBUG) console.log(`✓ Successfully fetched via proxy ${proxyIndex + 1}`);
         return response;
+      } else {
+        if (DEBUG) console.warn(`Proxy ${proxyIndex + 1} returned status ${response.status}`);
       }
     } catch (error) {
+      if (DEBUG) console.warn(`Proxy ${proxyIndex + 1} failed:`, error.message);
       if (i === CORS_PROXIES.length - 1) throw error;
       continue; // Try next proxy
     }
@@ -36,12 +45,12 @@ async function fetchWithCORS(url) {
 
 function extractPodcastId(url) {
   const match = url.match(/id(\d+)/);
-  if (match) return match[1];
-  
-  const episodeMatch = url.match(/\?i=(\d+)/);
-  if (episodeMatch) return episodeMatch[1];
-  
-  return null;
+  return match ? match[1] : null;
+}
+
+function extractEpisodeId(url) {
+  const match = url.match(/\?i=(\d+)/);
+  return match ? match[1] : null;
 }
 
 function parseTTML(ttmlText) {
@@ -105,47 +114,105 @@ async function fetchTranscript() {
 
   try {
     const podcastId = extractPodcastId(url);
-    if (!podcastId) {
-      throw new Error('Could not extract podcast ID from URL. Make sure you copied the complete URL.');
-    }
-
-    // Fetch podcast lookup data
-    const lookupUrl = `https://itunes.apple.com/lookup?id=${podcastId}&entity=podcast`;
-    const lookupResponse = await fetchWithCORS(lookupUrl);
-    const lookupData = await lookupResponse.json();
+    const episodeId = extractEpisodeId(url);
     
-    if (!lookupData.results || lookupData.results.length === 0) {
-      throw new Error('Podcast not found. Please check the URL and try again.');
+    if (DEBUG) console.log('Extracted IDs - Podcast:', podcastId, 'Episode:', episodeId);
+    
+    if (!podcastId && !episodeId) {
+      throw new Error('Could not extract podcast or episode ID from URL. Make sure you copied the complete URL.');
     }
 
-    const podcastInfo = lookupData.results[0];
-    const feedUrl = podcastInfo.feedUrl;
+    let podcastInfo = null;
+    let feedUrl = null;
+    
+    // If we have an episode ID, try looking it up directly first
+    // This can give us more accurate episode matching
+    if (episodeId) {
+      try {
+        if (DEBUG) console.log('Attempting episode direct lookup...');
+        const episodeLookupUrl = `https://itunes.apple.com/lookup?id=${episodeId}`;
+        const episodeLookupResponse = await fetchWithCORS(episodeLookupUrl);
+        const episodeLookupData = await episodeLookupResponse.json();
+        
+        if (DEBUG) console.log('Episode lookup response:', episodeLookupData.resultCount, 'results');
+        
+        if (episodeLookupData.results && episodeLookupData.results.length > 0) {
+          // The first result should be the episode, but we need the podcast info for the feed
+          // Sometimes the results include both episode and podcast
+          const results = episodeLookupData.results;
+          
+          // Look for podcast info in results (kind === 'podcast')
+          podcastInfo = results.find(r => r.kind === 'podcast' || (r.wrapperType === 'track' && r.collectionId));
+          
+          // If we found podcast info from episode lookup, use it
+          if (podcastInfo && podcastInfo.feedUrl) {
+            feedUrl = podcastInfo.feedUrl;
+            if (DEBUG) console.log('✓ Found feed URL from episode lookup:', feedUrl);
+          } else if (results[0] && results[0].collectionId) {
+            // Episode found but no podcast in results, lookup podcast by collectionId
+            const collectionId = results[0].collectionId;
+            if (DEBUG) console.log('Episode found, looking up podcast by collectionId:', collectionId);
+            const podcastLookupUrl = `https://itunes.apple.com/lookup?id=${collectionId}&entity=podcast`;
+            const podcastLookupResponse = await fetchWithCORS(podcastLookupUrl);
+            const podcastLookupData = await podcastLookupResponse.json();
+            
+            if (podcastLookupData.results && podcastLookupData.results.length > 0) {
+              podcastInfo = podcastLookupData.results[0];
+              feedUrl = podcastInfo.feedUrl;
+              if (DEBUG) console.log('✓ Found feed URL from podcast lookup:', feedUrl);
+            }
+          }
+        }
+      } catch (error) {
+        if (DEBUG) console.warn('Episode lookup failed, falling back to podcast lookup:', error.message);
+        // Continue to podcast lookup fallback below
+      }
+    }
+    
+    // Fallback: lookup by podcast ID if we haven't found the feed yet
+    if (!feedUrl && podcastId) {
+      if (DEBUG) console.log('Using podcast lookup (fallback or no episode ID)...');
+      const lookupUrl = `https://itunes.apple.com/lookup?id=${podcastId}&entity=podcast`;
+      const lookupResponse = await fetchWithCORS(lookupUrl);
+      const lookupData = await lookupResponse.json();
+      
+      if (DEBUG) console.log('Podcast lookup response:', lookupData.resultCount, 'results');
+      
+      if (!lookupData.results || lookupData.results.length === 0) {
+        throw new Error('Podcast not found. Please check the URL and try again.');
+      }
+
+      podcastInfo = lookupData.results[0];
+      feedUrl = podcastInfo.feedUrl;
+      if (DEBUG) console.log('✓ Found feed URL:', feedUrl);
+    }
     
     if (!feedUrl) {
       throw new Error('Could not find RSS feed for this podcast.');
     }
 
     // Fetch RSS feed
+    if (DEBUG) console.log('Fetching RSS feed...');
     const feedResponse = await fetchWithCORS(feedUrl);
     const feedText = await feedResponse.text();
     
     const parser = new DOMParser();
     const feedDoc = parser.parseFromString(feedText, 'text/xml');
     
-    // Get episode ID if provided in URL
-    const episodeIdMatch = url.match(/\?i=(\d+)/);
-    const episodeId = episodeIdMatch ? episodeIdMatch[1] : null;
+    const allItems = feedDoc.querySelectorAll('item');
+    if (DEBUG) console.log(`RSS feed contains ${allItems.length} episodes`);
     
     let targetItem = null;
     
     if (episodeId) {
+      if (DEBUG) console.log(`Searching for episode ID ${episodeId} in RSS feed...`);
       // Find specific episode by checking multiple fields
-      const items = feedDoc.querySelectorAll('item');
-      for (let item of items) {
+      for (let item of allItems) {
         // Check GUID
         const guid = item.querySelector('guid')?.textContent || '';
         if (guid.includes(episodeId)) {
           targetItem = item;
+          if (DEBUG) console.log('✓ Found episode by GUID match');
           break;
         }
         
@@ -154,14 +221,16 @@ async function fetchTranscript() {
         const enclosureUrl = enclosure?.getAttribute('url') || '';
         if (enclosureUrl.includes(episodeId)) {
           targetItem = item;
+          if (DEBUG) console.log('✓ Found episode by enclosure URL match');
           break;
         }
         
         // Check iTunes episode ID tag
-        const itunesEpisode = item.querySelector('itunes\\:episode') || item.querySelector('episode');
+        const itunesEpisode = item.querySelector('itunes\\:episode, episode');
         const itunesEpisodeText = itunesEpisode?.textContent || '';
         if (itunesEpisodeText.includes(episodeId)) {
           targetItem = item;
+          if (DEBUG) console.log('✓ Found episode by iTunes episode tag match');
           break;
         }
         
@@ -169,27 +238,24 @@ async function fetchTranscript() {
         const link = item.querySelector('link')?.textContent || '';
         if (link.includes(episodeId)) {
           targetItem = item;
+          if (DEBUG) console.log('✓ Found episode by link match');
           break;
         }
       }
       
       if (!targetItem) {
-        // Fallback: try to find by episode number in URL
-        const episodeNum = url.match(/episode[/-](\d+)/i);
-        if (episodeNum) {
-          const items = feedDoc.querySelectorAll('item');
-          targetItem = items[parseInt(episodeNum[1]) - 1] || items[0];
-        } else {
-          // Last resort: get the latest episode and warn the user
-          targetItem = feedDoc.querySelector('item');
-          if (targetItem) {
-            console.warn(`Could not find episode ${episodeId} in feed, using latest episode as fallback`);
-          }
-        }
+        console.error(`Episode ${episodeId} not found in any of the ${allItems.length} episodes in the RSS feed`);
+        // Episode ID not found in feed
+        throw new Error(`Episode ${episodeId} not found in the podcast's RSS feed. This could happen if:\n\n` +
+          `1. The episode was recently published and hasn't appeared in the RSS feed yet\n` +
+          `2. The episode was removed or made private\n` +
+          `3. The RSS feed doesn't include this episode ID in any of its fields\n\n` +
+          `Please try again later or verify the episode URL is correct.`);
       }
     } else {
       // Get latest episode
       targetItem = feedDoc.querySelector('item');
+      if (DEBUG) console.log('Using latest episode from feed');
     }
     
     if (!targetItem) {
