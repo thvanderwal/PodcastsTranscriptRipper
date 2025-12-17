@@ -1,8 +1,8 @@
 let currentTranscript = null;
 
 // Enable debug logging to help diagnose API and episode lookup issues
-// Set to false in production if you want to reduce console output
-const DEBUG = true;
+// Set to true if you're experiencing issues and want to see detailed console logs
+const DEBUG = false;
 
 document.getElementById('fetch-btn').addEventListener('click', fetchTranscript);
 document.getElementById('copy-btn').addEventListener('click', copyToClipboard);
