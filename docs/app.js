@@ -237,7 +237,7 @@ async function fetchTranscript() {
           const enclosureUrl = enclosure?.getAttribute('url') || '';
           
           // Match the audio URL - compare base URLs without query params for reliability
-          if (enclosureUrl && episodeAudioUrl) {
+          if (enclosureUrl.length > 0) {
             const cleanEnclosureUrl = enclosureUrl.split('?')[0];
             const cleanEpisodeUrl = episodeAudioUrl.split('?')[0];
             
