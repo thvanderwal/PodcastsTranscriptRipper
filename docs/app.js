@@ -1,7 +1,14 @@
 let currentTranscript = null;
 
 // Enable debug logging to help diagnose API and episode lookup issues
-// Set to true if you're experiencing issues and want to see detailed console logs
+// DEBUG is set to true by default to help users troubleshoot issues
+// When enabled, detailed logs are printed to the browser console showing:
+// - Episode ID extraction from URLs
+// - iTunes API lookup requests and responses
+// - RSS feed parsing and episode matching attempts
+// - Which matching methods succeeded or failed
+// - Authentication notes when episodes aren't found
+// Users should open the browser console (F12) to see these diagnostic logs
 const DEBUG = true;
 
 document.getElementById('fetch-btn').addEventListener('click', fetchTranscript);
