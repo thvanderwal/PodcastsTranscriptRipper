@@ -2,7 +2,7 @@ let currentTranscript = null;
 
 // Enable debug logging to help diagnose API and episode lookup issues
 // Set to true if you're experiencing issues and want to see detailed console logs
-const DEBUG = false;
+const DEBUG = true;
 
 document.getElementById('fetch-btn').addEventListener('click', fetchTranscript);
 document.getElementById('copy-btn').addEventListener('click', copyToClipboard);
@@ -266,7 +266,9 @@ async function fetchTranscript() {
     const podcastId = extractPodcastId(url);
     const episodeId = extractEpisodeId(url);
     
-    if (DEBUG) console.log('Extracted IDs - Podcast:', podcastId, 'Episode:', episodeId);
+    console.log('🔍 Extracted IDs from URL:');
+    console.log(`   Podcast ID: ${podcastId || 'Not found'}`);
+    console.log(`   Episode ID: ${episodeId || 'Not found'}`);
     
     if (!podcastId && !episodeId) {
       throw new Error('Could not extract podcast or episode ID from URL. Make sure you copied the complete URL.');
@@ -280,7 +282,7 @@ async function fetchTranscript() {
     // This can give us more accurate episode matching
     if (episodeId) {
       try {
-        if (DEBUG) console.log('Attempting episode direct lookup...');
+        console.log('📡 Attempting episode direct lookup via iTunes API...');
         // Look up episode with podcastEpisode entity to get episode details including audio URL
         // The API response may also include the parent podcast collection, allowing us to
         // extract both the episode audio URL and podcast feed URL from a single call
@@ -288,8 +290,8 @@ async function fetchTranscript() {
         const episodeLookupResponse = await fetchWithCORS(episodeLookupUrl);
         const episodeLookupData = await episodeLookupResponse.json();
         
+        console.log(`ℹ️ Episode lookup response: ${episodeLookupData.resultCount} results`);
         if (DEBUG) {
-          console.log('Episode lookup response:', episodeLookupData.resultCount, 'results');
           console.log('Result types:', episodeLookupData.results?.map(r => ({
             wrapperType: r.wrapperType,
             kind: r.kind,
@@ -309,15 +311,17 @@ async function fetchTranscript() {
             // Get the audio URL - this is the key to matching with RSS feed
             // episodeUrl is the full episode, previewUrl is a 90-second preview (fallback)
             episodeAudioUrl = episodeInfo.episodeUrl || episodeInfo.previewUrl;
-            if (DEBUG) console.log('✓ Found episode audio URL from API:', episodeAudioUrl ? episodeAudioUrl.substring(0, 80) + '...' : 'none');
-            if (!episodeAudioUrl && DEBUG) {
+            console.log(`✅ Found episode audio URL from API: ${episodeAudioUrl ? episodeAudioUrl.substring(0, 80) + '...' : 'none'}`);
+            if (!episodeAudioUrl) {
               console.warn(
-                'Episode info found but no audio URL could be extracted (episodeUrl/previewUrl missing). Episode ID:',
+                '⚠️ Episode info found but no audio URL could be extracted (episodeUrl/previewUrl missing). Episode ID:',
                 episodeId,
                 'Track name:',
                 episodeInfo.trackName
               );
             }
+          } else {
+            console.log(`ℹ️ Episode info not found in API response for episode ID ${episodeId}`);
           }
           
           // Look for podcast collection in results
@@ -331,11 +335,11 @@ async function fetchTranscript() {
           // If we found podcast info from episode lookup, use it
           if (podcastInfo && podcastInfo.feedUrl) {
             feedUrl = podcastInfo.feedUrl;
-            if (DEBUG) console.log('✓ Found feed URL from episode lookup:', feedUrl);
+            console.log(`✅ Found feed URL from episode lookup: ${feedUrl}`);
           } else if (results[0] && results[0].collectionId) {
             // Episode found but no podcast in results, lookup podcast by collectionId
             const collectionId = results[0].collectionId;
-            if (DEBUG) console.log('Episode found, looking up podcast by collectionId:', collectionId);
+            console.log(`📡 Episode found, looking up podcast by collectionId: ${collectionId}`);
             const podcastLookupUrl = `https://itunes.apple.com/lookup?id=${collectionId}&entity=podcast`;
             const podcastLookupResponse = await fetchWithCORS(podcastLookupUrl);
             const podcastLookupData = await podcastLookupResponse.json();
@@ -343,24 +347,24 @@ async function fetchTranscript() {
             if (podcastLookupData.results && podcastLookupData.results.length > 0) {
               podcastInfo = podcastLookupData.results[0];
               feedUrl = podcastInfo.feedUrl;
-              if (DEBUG) console.log('✓ Found feed URL from podcast lookup:', feedUrl);
+              console.log(`✅ Found feed URL from podcast lookup: ${feedUrl}`);
             }
           }
         }
       } catch (error) {
-        if (DEBUG) console.warn('Episode lookup failed, falling back to podcast lookup:', error.message);
+        console.warn('⚠️ Episode lookup failed, falling back to podcast lookup:', error.message);
         // Continue to podcast lookup fallback below
       }
     }
     
     // Fallback: lookup by podcast ID if we haven't found the feed yet
     if (!feedUrl && podcastId) {
-      if (DEBUG) console.log('Using podcast lookup (fallback or no episode ID)...');
+      console.log('📡 Using podcast lookup (fallback or no episode ID)...');
       const lookupUrl = `https://itunes.apple.com/lookup?id=${podcastId}&entity=podcast`;
       const lookupResponse = await fetchWithCORS(lookupUrl);
       const lookupData = await lookupResponse.json();
       
-      if (DEBUG) console.log('Podcast lookup response:', lookupData.resultCount, 'results');
+      console.log(`ℹ️ Podcast lookup response: ${lookupData.resultCount} results`);
       
       if (!lookupData.results || lookupData.results.length === 0) {
         throw new Error('Podcast not found. Please check the URL and try again.');
@@ -368,7 +372,7 @@ async function fetchTranscript() {
 
       podcastInfo = lookupData.results[0];
       feedUrl = podcastInfo.feedUrl;
-      if (DEBUG) console.log('✓ Found feed URL:', feedUrl);
+      console.log(`✅ Found feed URL: ${feedUrl}`);
     }
     
     if (!feedUrl) {
@@ -376,7 +380,7 @@ async function fetchTranscript() {
     }
 
     // Fetch RSS feed
-    if (DEBUG) console.log('Fetching RSS feed...');
+    console.log('📡 Fetching RSS feed...');
     const feedResponse = await fetchWithCORS(feedUrl);
     const feedText = await feedResponse.text();
     
@@ -384,19 +388,22 @@ async function fetchTranscript() {
     const feedDoc = parser.parseFromString(feedText, 'text/xml');
     
     const allItems = feedDoc.querySelectorAll('item');
-    if (DEBUG) console.log(`RSS feed contains ${allItems.length} episodes`);
+    console.log(`ℹ️ RSS feed contains ${allItems.length} episodes`);
     
     let targetItem = null;
     
     if (episodeId) {
       // episodeAudioUrl was already obtained from the initial API call above (if available)
       
-      if (DEBUG) console.log(`Searching for episode in RSS feed...`);
+      console.log(`🔍 Searching for episode ID ${episodeId} in RSS feed...`);
+      console.log(`📋 Episode audio URL from API: ${episodeAudioUrl || 'Not available'}`);
       
       // Try to match by audio URL first (most reliable method)
       if (episodeAudioUrl) {
-        if (DEBUG) console.log('Attempting to match by audio URL...');
+        console.log('🎯 Attempting to match by audio URL...');
         const normalizedEpisodeUrl = normalizeUrl(episodeAudioUrl);
+        console.log(`   Normalized episode URL: ${normalizedEpisodeUrl}`);
+        
         for (let item of allItems) {
           const enclosure = item.querySelector('enclosure');
           const enclosureUrl = enclosure?.getAttribute('url') || '';
@@ -407,22 +414,48 @@ async function fetchTranscript() {
             
             if (normalizedEnclosureUrl === normalizedEpisodeUrl) {
               targetItem = item;
-              if (DEBUG) console.log('✓ Found episode by audio URL match');
+              console.log('✅ Found episode by audio URL match');
               break;
             }
           }
+        }
+        
+        if (!targetItem) {
+          console.log('❌ Audio URL match failed - no matching enclosure URL found');
         }
       }
       
       // Fallback: Try other matching methods if audio URL matching didn't work
       if (!targetItem) {
-        if (DEBUG) console.log('Audio URL match failed, trying other methods...');
+        console.log('🔄 Audio URL match failed, trying alternative matching methods...');
+        console.log(`📋 Logging first 5 episodes from RSS feed for diagnostic purposes:`);
+        
+        // Log first few items for debugging
+        for (let i = 0; i < Math.min(5, allItems.length); i++) {
+          const item = allItems[i];
+          const title = item.querySelector('title')?.textContent || 'No title';
+          const guid = item.querySelector('guid')?.textContent || '';
+          const enclosure = item.querySelector('enclosure');
+          const enclosureUrl = enclosure?.getAttribute('url') || '';
+          const link = item.querySelector('link')?.textContent || '';
+          const itunesEpisode = item.querySelector('itunes\\:episode, episode');
+          const itunesEpisodeText = itunesEpisode?.textContent || '';
+          
+          console.log(`   Episode ${i + 1}: "${title.substring(0, 60)}${title.length > 60 ? '...' : ''}"`);
+          console.log(`      GUID: ${guid.substring(0, 100)}${guid.length > 100 ? '...' : ''}`);
+          console.log(`      Enclosure URL: ${enclosureUrl.substring(0, 100)}${enclosureUrl.length > 100 ? '...' : ''}`);
+          console.log(`      Link: ${link.substring(0, 100)}${link.length > 100 ? '...' : ''}`);
+          console.log(`      iTunes Episode: ${itunesEpisodeText}`);
+        }
+        
+        console.log(`🔍 Searching through all ${allItems.length} episodes for ID ${episodeId}...`);
+        
         for (let item of allItems) {
           // Check GUID
           const guid = item.querySelector('guid')?.textContent || '';
           if (guid.includes(episodeId)) {
             targetItem = item;
-            if (DEBUG) console.log('✓ Found episode by GUID match');
+            console.log('✅ Found episode by GUID match');
             break;
           }
           
@@ -431,7 +464,7 @@ async function fetchTranscript() {
           const enclosureUrl = enclosure?.getAttribute('url') || '';
           if (enclosureUrl.includes(episodeId)) {
             targetItem = item;
-            if (DEBUG) console.log('✓ Found episode by enclosure URL match');
+            console.log('✅ Found episode by enclosure URL match');
             break;
           }
           
@@ -440,7 +473,7 @@ async function fetchTranscript() {
           const itunesEpisodeText = itunesEpisode?.textContent || '';
           if (itunesEpisodeText.includes(episodeId)) {
             targetItem = item;
-            if (DEBUG) console.log('✓ Found episode by iTunes episode tag match');
+            console.log('✅ Found episode by iTunes episode tag match');
             break;
           }
           
@@ -448,37 +481,63 @@ async function fetchTranscript() {
           const link = item.querySelector('link')?.textContent || '';
           if (link.includes(episodeId)) {
             targetItem = item;
-            if (DEBUG) console.log('✓ Found episode by link match');
+            console.log('✅ Found episode by link match');
             break;
           }
         }
       }
       
       if (!targetItem) {
-        console.error(`Episode ${episodeId} not found in any of the ${allItems.length} episodes in the RSS feed`);
-        if (DEBUG && episodeAudioUrl) console.error('Episode audio URL from API:', episodeAudioUrl);
+        console.error(`❌ Episode ${episodeId} not found in any of the ${allItems.length} episodes in the RSS feed`);
+        console.error(`📋 Attempted matching methods:`);
+        console.error(`   1. Audio URL normalization (if audio URL was available)`);
+        console.error(`   2. GUID field search`);
+        console.error(`   3. Enclosure URL search`);
+        console.error(`   4. iTunes episode tag search`);
+        console.error(`   5. Link field search`);
+        console.error('');
+        console.error('ℹ️ IMPORTANT NOTES:');
+        console.error('   • This tool uses PUBLIC RSS feeds which may not include all episodes');
+        console.error('   • Some podcasts only include recent episodes in their RSS feed');
+        console.error('   • Older episodes might require Apple\'s AUTHENTICATED API');
+        console.error('   • The backend/server.js uses authenticated API but requires Bearer tokens');
+        console.error('   • Bearer tokens expire and need to be refreshed regularly');
+        console.error('');
+        if (DEBUG && episodeAudioUrl) {
+          console.error('Episode audio URL from API:', episodeAudioUrl);
+        }
         // Episode ID not found in feed
         throw new Error(`Episode ${episodeId} not found in the podcast's RSS feed. This could happen if:\n\n` +
           `1. The episode was recently published and hasn't appeared in the RSS feed yet\n` +
           `2. The episode was removed or made private\n` +
-          `3. The RSS feed doesn't include this episode ID in any of its fields\n\n` +
-          `Please try again later or verify the episode URL is correct.`);
+          `3. The RSS feed doesn't include this episode ID in any of its fields\n` +
+          `4. The RSS feed only includes recent episodes (some podcasts limit their RSS feed to the latest 100-300 episodes)\n\n` +
+          `AUTHENTICATION NOTE: This tool uses public RSS feeds which don't require authentication. However, ` +
+          `some episodes may only be accessible via Apple's authenticated API. To access these episodes, you would need ` +
+          `to use the backend server (backend/server.js) with valid Apple API bearer tokens. These tokens expire every ` +
+          `30 days and require special Apple credentials to obtain.\n\n` +
+          `Please check the browser console for detailed diagnostic logs, or try a more recent episode.`);
       }
     } else {
       // Get latest episode
       targetItem = feedDoc.querySelector('item');
-      if (DEBUG) console.log('Using latest episode from feed');
+      console.log('ℹ️ No episode ID provided - using latest episode from feed');
     }
     
     if (!targetItem) {
       throw new Error('Could not find episode in podcast feed.');
     }
     
+    console.log('✅ Episode found in RSS feed!');
+    
     // Extract episode metadata
     const title = targetItem.querySelector('title')?.textContent || 'Unknown Episode';
+    console.log(`📋 Episode title: ${title}`);
     const description = targetItem.querySelector('description')?.textContent || '';
     const pubDate = targetItem.querySelector('pubDate')?.textContent || '';
     const duration = targetItem.querySelector('duration')?.textContent || 'Unknown';
+    
+    console.log('🔍 Looking for transcript in RSS feed...');
     
     // Look for transcript in various podcast namespace formats
     const transcriptElement = 
@@ -492,6 +551,16 @@ async function fetchTranscript() {
                         transcriptElement?.textContent?.trim();
     
     if (!transcriptUrl) {
+      console.warn('⚠️ No transcript found in RSS feed for this episode');
+      console.warn('ℹ️ Checked for:');
+      console.warn('   • podcast:transcript element');
+      console.warn('   • Elements with type="application/srt"');
+      console.warn('   • Elements with type="application/x-subrip"');
+      console.warn('   • Elements with rel="captions"');
+      console.warn('');
+      console.warn('💡 NOTE: Not all podcasts include transcripts in their RSS feeds.');
+      console.warn('   Some transcripts may only be available through Apple\'s authenticated API.');
+      
       showWarning(`Episode found: "${title}"\n\nUnfortunately, this episode doesn't have a transcript available in the RSS feed. The podcast creator may not have provided one, or it may only be available through Apple's API (which requires authentication).\n\nSome podcasts include transcripts in their show notes instead.`);
       
       // Still show metadata even without transcript
@@ -514,23 +583,33 @@ async function fetchTranscript() {
       return;
     }
 
+    console.log(`✅ Transcript URL found: ${transcriptUrl.substring(0, 100)}${transcriptUrl.length > 100 ? '...' : ''}`);
+    
     // Fetch and parse transcript
+    console.log('📡 Fetching transcript file...');
     const transcriptResponse = await fetchWithCORS(transcriptUrl);
     const transcriptText = await transcriptResponse.text();
+    
+    console.log(`✅ Transcript file downloaded (${transcriptText.length} bytes)`);
+    console.log('🔄 Parsing transcript...');
     
     let parsedTranscript;
     
     // Try to parse as TTML first, then SRT
     if (transcriptText.includes('<tt') || transcriptText.includes('<?xml')) {
+      console.log('📝 Detected TTML format');
       parsedTranscript = parseTTML(transcriptText);
     } else {
       // Assume SRT format
+      console.log('📝 Detected SRT format');
       parsedTranscript = parseSRT(transcriptText);
     }
     
     if (!parsedTranscript.hasTranscript) {
       throw new Error('Transcript file is empty or could not be parsed.');
     }
+    
+    console.log(`✅ Transcript parsed successfully: ${parsedTranscript.segments.length} segments, ${parsedTranscript.fullText.length} characters`);
 
     currentTranscript = {
       metadata: {
