@@ -104,17 +104,17 @@ function normalizeUrl(url) {
     } catch (err) {
       // If decoding fails due to malformed encoding, use the original pathname
       // This prevents the function from breaking on edge cases
-      // Catch both URIError and TypeError
+      // Pathname is already set to parsed.pathname, so no action needed
     }
     pathname = pathname.toLowerCase(); // Lowercase after decoding
     pathname = pathname.replace(/\/+/g, '/'); // Replace multiple slashes with single slash
     pathname = pathname.replace(/\/+$/, ''); // Remove trailing slashes
     
     // Re-encode the pathname to ensure consistent encoding
-    // Split by '/', encode each segment (which are now decoded), then rejoin
+    // Split by '/', encode each non-empty segment (which are now decoded), then rejoin
     pathname = pathname
       .split('/')
-      .map(segment => encodeURIComponent(segment))
+      .map(segment => segment ? encodeURIComponent(segment) : segment)
       .join('/');
     
     const port = parsed.port ? `:${parsed.port}` : '';
@@ -127,7 +127,7 @@ function normalizeUrl(url) {
     let normalized = url.toLowerCase();
     
     // Replace http:// with https://
-    normalized = normalized.replace(/^http:/, 'https:');
+    normalized = normalized.replace(/^http:\/\//, 'https://');
     
     // Remove www subdomain (after protocol is set to https)
     normalized = normalized.replace(/^https:\/\/www\./, 'https://');
