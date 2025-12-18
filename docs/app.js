@@ -104,7 +104,10 @@ function normalizeUrl(url) {
     
     // Re-encode the pathname to ensure consistent encoding
     // This handles cases where some URLs are encoded and others are not
-    pathname = encodeURI(pathname);
+    pathname = pathname
+      .split('/')
+      .map(segment => encodeURIComponent(segment))
+      .join('/');
     
     const port = parsed.port ? `:${parsed.port}` : '';
     
