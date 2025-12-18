@@ -510,8 +510,9 @@ async function fetchTranscript() {
         console.error('   • The backend/server.js uses authenticated API but requires Bearer tokens');
         console.error('   • Bearer tokens expire and need to be refreshed regularly');
         console.error('');
-        if (DEBUG && episodeAudioUrl) {
+        if (episodeAudioUrl) {
           console.error('Episode audio URL from API:', episodeAudioUrl);
+          console.error('');
         }
         // Episode ID not found in feed
         throw new Error(`Episode ${episodeId} not found in the podcast's RSS feed. This could happen if:\n\n` +
