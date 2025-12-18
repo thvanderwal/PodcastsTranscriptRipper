@@ -119,7 +119,7 @@ function normalizeUrl(url) {
       .replace(/^https:\/\/www\./, 'https://') // Remove www subdomain
       .split('?')[0]
       .split('#')[0]
-      .replace(/\/+/g, '/') // Normalize multiple slashes
+      .replace(/(?<!:)\/+/g, '/') // Normalize multiple slashes, but preserve protocol slashes
       .replace(/\/+$/, ''); // Remove trailing slashes
   }
 }
