@@ -70,9 +70,18 @@ function extractEpisodeId(url) {
 function normalizeUrl(url) {
   if (!url) return '';
   
+  // Ensure URL has a protocol for parsing
+  // Check if URL has a protocol (scheme://)
+  const hasProtocolRegex = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//;
+  let urlToParse = url;
+  if (!hasProtocolRegex.test(url)) {
+    // URL doesn't have a protocol, prepend https://
+    urlToParse = 'https://' + url;
+  }
+  
   try {
     // Parse the URL
-    const parsed = new URL(url);
+    const parsed = new URL(urlToParse);
     
     // Convert to lowercase for case-insensitive comparison
     // Use https protocol consistently
@@ -93,18 +102,16 @@ function normalizeUrl(url) {
     try {
       pathname = decodeURIComponent(pathname);
     } catch (err) {
-      // If decoding fails due to malformed encoding (URIError), use the original pathname
+      // If decoding fails due to malformed encoding, use the original pathname
       // This prevents the function from breaking on edge cases
-      if (!(err instanceof URIError)) {
-        throw err; // Re-throw if it's not a URIError
-      }
+      // Catch both URIError and TypeError
     }
     pathname = pathname.toLowerCase(); // Lowercase after decoding
     pathname = pathname.replace(/\/+/g, '/'); // Replace multiple slashes with single slash
     pathname = pathname.replace(/\/+$/, ''); // Remove trailing slashes
     
     // Re-encode the pathname to ensure consistent encoding
-    // This handles cases where some URLs are encoded and others are not
+    // Split by '/', encode each segment (which are now decoded), then rejoin
     pathname = pathname
       .split('/')
       .map(segment => encodeURIComponent(segment))
@@ -127,32 +134,66 @@ function normalizeUrl(url) {
     
     // Normalize pathname in fallback: decode, normalize slashes, re-encode
     try {
-      const parts = normalized.split('?')[0].split('#')[0].split('/');
-      const protocolAndHost = parts.slice(0, 3).join('/'); // https://hostname
-      const pathSegments = parts.slice(3); // path segments after hostname
+      // More robust approach: use regex to split protocol and rest
+      const match = normalized.match(/^(https?:\/\/)(.+)$/);
+      if (match) {
+        const protocol = match[1]; // https://
+        const rest = match[2]; // everything after protocol
+        
+        // Split into host (possibly with port) and path
+        const firstSlash = rest.indexOf('/');
+        let host, path;
+        if (firstSlash === -1) {
+          host = rest;
+          path = '';
+        } else {
+          host = rest.substring(0, firstSlash);
+          path = rest.substring(firstSlash);
+        }
+        
+        // Normalize the path
+        const normalizedPath = path
+          .split('?')[0]
+          .split('#')[0]
+          .split('/')
+          .map(segment => {
+            if (!segment) return segment; // Empty segments from leading/trailing slashes
+            try {
+              // Decode, then re-encode for consistent encoding
+              return encodeURIComponent(decodeURIComponent(segment));
+            } catch (err) {
+              return segment;
+            }
+          })
+          .join('/')
+          .replace(/\/+/g, '/') // Normalize multiple slashes
+          .replace(/\/+$/, ''); // Remove trailing slashes
+        
+        return protocol + host + normalizedPath;
+      }
       
-      const normalizedPath = pathSegments
-        .map(segment => {
-          try {
-            // Decode, then re-encode each segment
-            return encodeURIComponent(decodeURIComponent(segment));
-          } catch (err) {
-            // If decoding fails, return segment as-is
-            return segment;
-          }
-        })
-        .join('/')
-        .replace(/\/+/g, '/') // Normalize multiple slashes
-        .replace(/\/+$/, ''); // Remove trailing slashes
-      
-      return protocolAndHost + (normalizedPath ? '/' + normalizedPath : '');
-    } catch (err) {
-      // Ultimate fallback: just do basic string operations
+      // If no protocol match, return the URL with basic cleanup
       return normalized
         .split('?')[0]
         .split('#')[0]
-        .replace(/(?<!:)\/+/g, '/') // Normalize multiple slashes, but preserve protocol slashes
+        .replace(/\/+$/, '');
+    } catch (err) {
+      // Ultimate fallback: just do basic string operations
+      const urlWithoutParams = normalized
+        .split('?')[0]
+        .split('#')[0]
         .replace(/\/+$/, ''); // Remove trailing slashes
+      
+      // Normalize multiple slashes while preserving protocol slashes
+      // Split on protocol, normalize path, then rejoin
+      const protocolMatch = urlWithoutParams.match(/^(https?:\/\/)/);
+      if (protocolMatch) {
+        const protocol = protocolMatch[1];
+        const rest = urlWithoutParams.slice(protocol.length);
+        return protocol + rest.replace(/\/+/g, '/');
+      }
+      
+      return urlWithoutParams.replace(/\/+/g, '/');
     }
   }
 }
