@@ -75,8 +75,13 @@ function normalizeUrl(url) {
   const hasProtocolRegex = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//;
   let urlToParse = url;
   if (!hasProtocolRegex.test(url)) {
-    // URL doesn't have a protocol, prepend https://
-    urlToParse = 'https://' + url;
+    // Handle protocol-relative URLs (starting with //)
+    if (url.startsWith('//')) {
+      urlToParse = 'https:' + url;
+    } else {
+      // URL doesn't have a protocol, prepend https://
+      urlToParse = 'https://' + url;
+    }
   }
   
   try {
@@ -114,7 +119,7 @@ function normalizeUrl(url) {
     // Split by '/', encode each non-empty segment (which are now decoded), then rejoin
     pathname = pathname
       .split('/')
-      .map(segment => segment ? encodeURIComponent(segment) : segment)
+      .map(segment => segment !== '' ? encodeURIComponent(segment) : segment)
       .join('/');
     
     const port = parsed.port ? `:${parsed.port}` : '';
@@ -135,7 +140,7 @@ function normalizeUrl(url) {
     // Normalize pathname in fallback: decode, normalize slashes, re-encode
     try {
       // More robust approach: use regex to split protocol and rest
-      const match = normalized.match(/^(https?:\/\/)(.+)$/);
+      const match = normalized.match(/^(https?:\/\/)(.*)$/);
       if (match) {
         const protocol = match[1]; // https://
         const rest = match[2]; // everything after protocol
@@ -157,7 +162,7 @@ function normalizeUrl(url) {
           .split('#')[0]
           .split('/')
           .map(segment => {
-            if (!segment) return segment; // Empty segments from leading/trailing slashes
+            if (segment === '') return segment; // Empty segments from leading/trailing slashes
             try {
               // Decode, then re-encode for consistent encoding
               return encodeURIComponent(decodeURIComponent(segment));
