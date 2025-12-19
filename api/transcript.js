@@ -78,17 +78,32 @@ module.exports = async (req, res) => {
   try {
     const { url } = req.body;
     
-    if (!url) {
+    if (!url || typeof url !== 'string') {
       return res.status(400).json({ error: 'URL is required' });
     }
     
-    // Extract episode ID from URL
-    const match = url.match(/\?i=(\d+)/);
-    if (!match) {
-      return res.status(400).json({ error: 'Invalid podcast URL. Please provide a valid Apple Podcasts episode URL with ?i= parameter.' });
+    // Validate URL format and restrict to expected Apple Podcasts domains
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(url);
+    } catch (_) {
+      return res.status(400).json({ error: 'Invalid URL format' });
+    }
+
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      return res.status(400).json({ error: 'Invalid URL protocol. Only http and https are allowed.' });
+    }
+
+    // Require an Apple domain (e.g., podcasts.apple.com) to match expected Apple Podcasts URLs
+    if (!/\.apple\.com$/i.test(parsedUrl.hostname)) {
+      return res.status(400).json({ error: 'Invalid podcast URL. Please provide a valid Apple Podcasts episode URL.' });
     }
     
-    const episodeId = match[1];
+    // Extract episode ID from URL query parameters
+    const episodeId = parsedUrl.searchParams.get('i');
+    if (!episodeId || !/^\d+$/.test(episodeId)) {
+      return res.status(400).json({ error: 'Invalid podcast URL. Please provide a valid Apple Podcasts episode URL with ?i= parameter.' });
+    }
     
     // Get bearer token from environment
     const BEARER_TOKEN = process.env.APPLE_BEARER_TOKEN;
