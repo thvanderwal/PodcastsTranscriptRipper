@@ -4,14 +4,49 @@
 const axios = require('axios');
 const xml2js = require('xml2js');
 
-// Parse TTML to extract transcript
-function parseTTML(ttmlText) {
-  const parser = new xml2js.Parser();
-  let result = null;
+// Simple in-memory rate limiter
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 10; // 10 requests per minute per IP
+
+function checkRateLimit(identifier) {
+  const now = Date.now();
+  const userRequests = rateLimitMap.get(identifier) || [];
   
-  parser.parseString(ttmlText, (err, parsedResult) => {
-    if (err) throw err;
-    result = parsedResult;
+  // Remove old requests outside the window
+  const recentRequests = userRequests.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW);
+  
+  if (recentRequests.length >= MAX_REQUESTS_PER_WINDOW) {
+    return false; // Rate limit exceeded
+  }
+  
+  // Add current request
+  recentRequests.push(now);
+  rateLimitMap.set(identifier, recentRequests);
+  
+  // Clean up old entries periodically
+  if (rateLimitMap.size > 1000) {
+    for (const [key, timestamps] of rateLimitMap.entries()) {
+      const validTimestamps = timestamps.filter(ts => now - ts < RATE_LIMIT_WINDOW);
+      if (validTimestamps.length === 0) {
+        rateLimitMap.delete(key);
+      }
+    }
+  }
+  
+  return true; // Request allowed
+}
+
+// Parse TTML to extract transcript
+async function parseTTML(ttmlText) {
+  const parser = new xml2js.Parser();
+  
+  // Use promise wrapper for async parsing
+  const result = await new Promise((resolve, reject) => {
+    parser.parseString(ttmlText, (err, parsedResult) => {
+      if (err) reject(err);
+      else resolve(parsedResult);
+    });
   });
   
   const body = result?.tt?.body?.[0];
@@ -75,6 +110,15 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Rate limiting check
+  const identifier = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
+  if (!checkRateLimit(identifier)) {
+    return res.status(429).json({ 
+      error: 'Too many requests',
+      hint: 'Please wait a moment before trying again. Rate limit: 10 requests per minute.'
+    });
+  }
+
   try {
     const { url } = req.body;
     
@@ -121,7 +165,7 @@ module.exports = async (req, res) => {
     const metadataResponse = await axios.get(metadataUrl, {
       headers: {
         'Authorization': `Bearer ${BEARER_TOKEN}`,
-        'User-Agent': 'Podcasts/1.1.0 (Macintosh; OS X 15.5)',
+        'User-Agent': process.env.APPLE_USER_AGENT || 'Podcasts/1.1.0 (Macintosh; OS X 15.5)',
       },
       timeout: 10000,
     });
@@ -148,7 +192,7 @@ module.exports = async (req, res) => {
     });
     
     // Parse TTML
-    const { fullText, segments } = parseTTML(ttmlResponse.data);
+    const { fullText, segments } = await parseTTML(ttmlResponse.data);
     
     // Get episode metadata
     const episodeData = metadataResponse.data?.included?.find(
