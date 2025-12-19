@@ -44,7 +44,22 @@ function parseTTML(ttmlText) {
 module.exports = async (req, res) => {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  const allowedOriginsEnv = process.env.CORS_ALLOWED_ORIGINS || '';
+  const allowedOrigins = allowedOriginsEnv
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(origin => origin.length > 0);
+
+  const requestOrigin = req.headers.origin;
+
+  if (requestOrigin && allowedOrigins.length > 0 && allowedOrigins.includes(requestOrigin)) {
+    // Restrict CORS to explicitly allowed origins in configuration
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+  } else if (process.env.NODE_ENV !== 'production') {
+    // In non-production environments, allow all origins for easier development
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
