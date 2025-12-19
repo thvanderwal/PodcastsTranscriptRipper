@@ -161,7 +161,7 @@ module.exports = async (req, res) => {
     } else {
       return res.status(500).json({ 
         error: 'Internal server error',
-        message: error.message 
+        message: 'An unexpected error occurred while processing your request.'
       });
     }
   }
