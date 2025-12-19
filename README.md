@@ -45,6 +45,23 @@ podcast-transcript-exporter/
 
 3. **Privacy**: Works entirely in your browser. No data is sent to any server (except the CORS proxies needed to fetch public RSS feeds).
 
+## Troubleshooting
+
+If you encounter errors or the app doesn't find your episode:
+
+1. **Check the browser console** (F12 or right-click → Inspect → Console). The app now includes detailed logging that shows:
+   - Episode ID extraction
+   - API lookup attempts
+   - RSS feed parsing progress
+   - Which matching methods were tried
+   - Why an episode wasn't found
+
+2. **RSS Feed Limitations**: Public RSS feeds may only include recent episodes (typically the last 100-300 episodes). Older episodes may not be accessible without authentication.
+
+3. **Authentication**: This tool uses **public, unauthenticated RSS feeds**. Some podcast episodes or transcripts may only be available through Apple's authenticated API, which requires special bearer tokens that expire every 30 days. The `backend/server.js` file includes code for authenticated access, but requires Apple API credentials.
+
+4. **Episode Not Found**: If you get an "Episode not found" error, the detailed console logs will show you which RSS feed fields were checked and help determine if the episode simply isn't in the public RSS feed.
+
 ## License
 
 MIT
