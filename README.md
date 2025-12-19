@@ -2,23 +2,32 @@
 
 A serverless application that extracts full transcripts from Apple Podcasts using Apple's authenticated API. Deployed on Vercel with automatic scaling and edge network distribution.
 
+## ⚡ Quick Start
+
+**For detailed instructions, see:**
+- 🔑 **[How to Get Your API Token](GETTING_TOKEN.md)** - Step-by-step guide
+- 🚀 **[Deployment Guide](DEPLOYMENT.md)** - Deploy to Vercel
+- 📖 **[Full Documentation](#)** - Below
+
 ## 🚀 Quick Deploy to Vercel
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/thvanderwal/PodcastsTranscriptRipper)
 
 1. Click the deploy button above
 2. Follow the Vercel setup wizard
-3. Configure your Apple API token (see below)
+3. Configure your Apple API token (see [GETTING_TOKEN.md](GETTING_TOKEN.md))
 4. Your app will be live in minutes!
 
 ## 📋 Prerequisites
 
 - A [Vercel account](https://vercel.com/signup) (free tier works great!)
-- An Apple API Bearer Token (instructions below)
+- An Apple API Bearer Token ([get it here](GETTING_TOKEN.md))
 
 ## 🔑 Getting Your Apple API Bearer Token
 
-The Apple Podcast API requires authentication via a bearer token. Here's how to get it:
+**For detailed step-by-step instructions with screenshots, see [GETTING_TOKEN.md](GETTING_TOKEN.md)**
+
+The Apple Podcast API requires authentication via a bearer token. Here's a quick overview:
 
 ### Method 1: Using Apple Podcasts Web Player (Recommended)
 
@@ -66,6 +75,8 @@ fetch('https://sf-api-token-service.itunes.apple.com/apiToken')
 - 📧 **Set a calendar reminder** to refresh your token every month
 
 ## ⚙️ Setting Up the Token in Vercel
+
+**For complete deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md)**
 
 ### Option A: Through Vercel Dashboard (Easiest)
 

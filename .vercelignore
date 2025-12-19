@@ -1,0 +1,11 @@
+# Don't deploy these directories/files to Vercel
+backend/
+frontend/
+docs/
+.github/
+.git/
+node_modules/
+
+# Development files
+.env.example
+
