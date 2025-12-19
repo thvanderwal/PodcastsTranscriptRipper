@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "vercel dev",
-    "build": "vercel build",
+    "build": "echo 'No build step required - static files and serverless functions'",
     "deploy": "vercel --prod"
   },
   "dependencies": {
