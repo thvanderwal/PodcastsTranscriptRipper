@@ -21,3 +21,6 @@ npm-debug.log*
 # Vercel
 .vercel
 .vercel.json
+
+# Tests (for local testing only)
+test-*.js
