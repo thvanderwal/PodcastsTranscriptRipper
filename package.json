@@ -1,0 +1,26 @@
+{
+  "name": "podcast-transcript-ripper",
+  "version": "2.0.0",
+  "description": "Apple Podcast Transcript Exporter with Vercel Serverless API",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "vercel build",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "vercel": "^33.0.0"
+  },
+  "keywords": [
+    "podcast",
+    "transcript",
+    "apple",
+    "vercel"
+  ],
+  "author": "",
+  "license": "MIT"
+}

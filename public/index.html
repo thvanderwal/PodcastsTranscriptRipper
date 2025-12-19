@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apple Podcast Transcript Exporter</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <h1>Apple Podcast Transcript Exporter</h1>
+      </div>
+
+      <p class="description">
+        Extract full transcripts from Apple Podcasts with metadata. Paste an Apple Podcasts episode URL below.
+      </p>
+
+      <div class="input-group">
+        <label for="podcast-url">Podcast Episode URL</label>
+        <input 
+          type="text" 
+          id="podcast-url" 
+          placeholder="https://podcasts.apple.com/us/podcast/.../id...?i=1000..."
+        >
+      </div>
+
+      <button id="fetch-btn" class="btn-primary">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Extract Transcript
+      </button>
+
+      <div id="error" class="alert alert-error" style="display: none;"></div>
+      <div id="loading" class="loading" style="display: none;">
+        <div class="spinner"></div>
+        <span>Fetching transcript...</span>
+      </div>
+
+      <div id="results" style="display: none;">
+        <div class="metadata-card">
+          <h2>Metadata</h2>
+          <div class="metadata-grid" id="metadata"></div>
+        </div>
+
+        <div class="transcript-section">
+          <div class="section-header">
+            <h2>Full Transcript</h2>
+            <button id="copy-btn" class="btn-secondary">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copy
+            </button>
+          </div>
+          <div class="transcript-box" id="transcript-text"></div>
+        </div>
+
+        <div class="export-section">
+          <h2>Export Options</h2>
+          <div class="export-buttons">
+            <button class="btn-export btn-blue" onclick="downloadTranscript('txt')">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              TXT
+            </button>
+            <button class="btn-export btn-green" onclick="downloadTranscript('srt')">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              SRT
+            </button>
+            <button class="btn-export btn-purple" onclick="downloadTranscript('json')">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              JSON
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>Transcripts are fetched from Apple's API using server-side authentication.</p>
+      <p>For best results, ensure the episode has a transcript available in Apple Podcasts.</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
