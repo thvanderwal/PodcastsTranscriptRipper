@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "podcast-transcript-ripper",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/public/$1"
+    }
+  ]
+}
